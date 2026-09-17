@@ -1,0 +1,76 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Syntax check every file
+        run: python -m compileall -q telemetrydoctor tests examples
+
+      # No GPU on this runner and none needed: the library's input is a CSV, so the
+      # whole logic layer is verifiable for free. The one thing that does need a card
+      # -- examples/verify_on_device.py, which settles what utilization.gpu actually
+      # measures -- is run by hand and its output is pasted into docs/what-sm-means.md.
+      - name: Tests
+        run: pytest -q
+
+      # The fixtures are generated, and a generated file that has drifted from its
+      # generator is a fixture nobody can check. This is the same guarantee the
+      # bundle's byte-identical bootstrap gives, applied to test data.
+      - name: Fixtures are reproducible from their generator
+        run: |
+          python tests/fixtures/make_fixtures.py
+          git diff --exit-code -- tests/fixtures/
+
+      - name: The CLI actually runs
+        run: |
+          telemetrydoctor contracts
+          telemetrydoctor audit tests/fixtures/EXAMPLE_matrix_8gpu.csv --interval 1.0
+          telemetrydoctor phases tests/fixtures/EXAMPLE_matrix_8gpu.csv
+          telemetrydoctor aggregate tests/fixtures/EXAMPLE_matrix_8gpu.csv
+
+      # The gate has to be able to fail, or it is decoration -- and it has to be
+      # able to pass, or it is a rubber stamp that always fires. Same shape as
+      # servedoctor's "The gate can fail" step.
+      #
+      # This step used to be the last line of the step above, without the `!`:
+      #
+      #     telemetrydoctor audit tests/fixtures/EXAMPLE_unimodal.csv --fail-on violation
+      #
+      # `--fail-on violation` is *supposed* to exit 1 there -- TL003 is the 69x
+      # PCIe integration finding, the project's headline result, and this fixture
+      # has PCIe columns. But GitHub runs `run:` blocks under `bash -e` and that
+      # was the block's last command, so the step inherited the exit code and CI
+      # would have been red on every single push. The command was right and the
+      # `!` was missing: an expected failure written as if it were an expected
+      # success. Scoping to one rule is what makes both halves sayable on the
+      # same file.
+      - name: The gate can fail, and can pass
+        run: |
+          ! telemetrydoctor audit tests/fixtures/EXAMPLE_unimodal.csv \
+                --rule TL003 --fail-on violation
+          telemetrydoctor audit tests/fixtures/EXAMPLE_unimodal.csv \
+                --rule TL001 --fail-on violation

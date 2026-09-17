@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "telemetrydoctor"
+version = "0.1.0"
+description = "What arithmetic a GPU telemetry column supports: phase segmentation, aggregation contracts, and refusals with the size of the error attached."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+authors = [{ name = "liu-perf" }]
+keywords = ["gpu", "nvidia-smi", "nvml", "telemetry", "benchmark", "observability"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: GPU :: NVIDIA CUDA",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Benchmark",
+    "Topic :: System :: Monitoring",
+]
+# No dependencies, on purpose. The whole library is standard-library file parsing
+# and arithmetic; a tool whose subject is "do not trust a number you did not check"
+# should not need three transitive packages to read a CSV.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "ruff>=0.5"]
+
+[project.urls]
+Homepage = "https://github.com/liu-perf/telemetrydoctor"
+Documentation = "https://liu-perf.github.io/telemetrydoctor/"
+
+[project.scripts]
+telemetrydoctor = "telemetrydoctor.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["telemetrydoctor*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+# Pinned explicitly rather than left to whatever the installed ruff defaults to, so
+# that a new ruff release cannot turn a green CI red without anybody changing code.
+# Same set as the other five repositories in this series.
+select = ["E4", "E7", "E9", "F", "B", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

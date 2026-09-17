@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Real-machine output. A telemetry capture names a specific host, a specific driver
+# and a specific moment, and the whole point of this repo is that those three
+# together are the disclosure. The fixtures ship worked examples instead.
+examples/_samples.csv
+*.local.csv
+capture_*/
