@@ -57,11 +57,17 @@ class Rng:
 
 
 def stamp(t):
-    """2026-07-31T12:36:14.123456 -- the shape the field sampler wrote."""
+    """2026-07-31T12:36:14.123456 -- the shape the field sampler wrote.
+
+    gmtime, not localtime: the fixtures are committed, and a test asserts the
+    generator reproduces them byte for byte. localtime makes that assertion a
+    statement about the machine's timezone -- it passed in UTC+8 and failed on
+    every CI runner, which is UTC.
+    """
     import time
     whole = int(t)
     frac = t - whole
-    return time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(whole)) + \
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(whole)) + \
         "{:.6f}".format(frac)[1:]
 
 
@@ -311,7 +317,7 @@ def build_query_gpu():
         for g in range(2):
             sm = rng.uniform(97.0, 99.6) if busy else 0.0
             pwr = rng.uniform(520.0, 555.0) if busy else rng.uniform(18.0, 22.0)
-            ts = time.strftime("%Y/%m/%d %H:%M:%S", time.localtime(int(t))) + \
+            ts = time.strftime("%Y/%m/%d %H:%M:%S", time.gmtime(int(t))) + \
                 "{:.3f}".format(t - int(t))[1:]
             lines.append("{}, {}, {:.0f}, {:.2f}".format(ts, g, sm, pwr))
         t += 0.2578
